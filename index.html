@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FazendaVerde — Simulador de Energia Renovável</title>
+
+<!-- ============================================================
+     CSS — Estilos principais
+     Paleta: Verde escuro #1a3c2e, Verde médio #2d6a4f, 
+             Âmbar #e9a329, Branco sujo #f5f0e8, Cinza #8a8a7a
+     Tipografia: Playfair Display (títulos) + DM Sans (corpo)
+     ============================================================ -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ── Reset & tokens ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-900: #0d2318;
+    --green-800: #1a3c2e;
+    --green-700: #2d6a4f;
+    --green-600: #40916c;
+    --green-400: #74c69d;
+    --green-100: #d8f3dc;
+    --green-50:  #f0faf3;
+    --amber-700: #b57a00;
+    --amber-500: #e9a329;
+    --amber-100: #fef3cd;
+    --red-600:   #c0392b;
+    --red-100:   #fdecea;
+    --cream:     #f5f0e8;
+    --sand:      #e8e0d0;
+    --gray-600:  #5a5a4a;
+    --gray-400:  #8a8a7a;
+    --gray-100:  #f0ece4;
+    --white:     #ffffff;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --font-title: 'Playfair Display', Georgia, serif;
+    --font-body:  'DM Sans', system-ui, sans-serif;
+    --transition: 0.2s ease;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--cream);
+    color: var(--green-800);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Layout shell ────────────────────────────────────────────── */
+  .app-header {
+    background: var(--green-800);
+    color: var(--cream);
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid var(--amber-500);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-title);
+    font-size: 1.4rem;
+    color: var(--cream);
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--amber-500);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 13px;
+    color: var(--green-400);
+  }
+
+  .year-badge {
+    background: var(--green-700);
+    color: var(--cream);
+    padding: 4px 14px;
+    border-radius: var(--radius-xl);
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 65px);
+  }
+
+  /* ── Sidebar ─────────────────────────────────────────────────── */
+  .sidebar {
+    background: var(--green-900);
+    color: var(--cream);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .sidebar-section-title {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--green-400);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+  }
+
+  .stat-card-label {
+    font-size: 11px;
+    color: var(--green-400);
+    margin-bottom: 3px;
+  }
+
+  .stat-card-value {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--cream);
+    line-height: 1.1;
+  }
+
+  .stat-card-value.good { color: var(--green-400); }
+  .stat-card-value.warn { color: var(--amber-500); }
+  .stat-card-value.bad  { color: #e07070; }
+
+  /* Meter bars */
+  .meter {
+    margin-bottom: 10px;
+  }
+
+  .meter-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--green-400);
+    margin-bottom: 5px;
+  }
+
+  .meter-track {
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  /* Sidebar log */
+  .log-scroll {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 220px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--green-700) transparent;
+  }
+
+  .log-entry {
+    font-size: 11.5px;
+    color: rgba(245,240,232,0.65);
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.5;
+  }
+
+  .log-entry strong {
+    color: var(--green-400);
+    font-weight: 500;
+  }
+
+  /* ── Main content ────────────────────────────────────────────── */
+  .main-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Tutorial overlay */
+  .tutorial-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(13,35,24,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 2rem;
+  }
+
+  .tutorial-box {
+    background: var(--cream);
+    border-radius: var(--radius-xl);
+    max-width: 600px;
+    width: 100%;
+    overflow: hidden;
+    border: 2px solid var(--amber-500);
+  }
+
+  .tutorial-header {
+    background: var(--green-800);
+    color: var(--cream);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tutorial-header-icon {
+    width: 42px; height: 42px;
+    background: var(--amber-500);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .tutorial-header h2 {
+    font-family: var(--font-title);
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .tutorial-header p {
+    font-size: 12px;
+    color: var(--green-400);
+    margin-top: 2px;
+  }
+
+  .tutorial-steps {
+    padding: 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tutorial-step {
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .tutorial-step.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .step-num {
+    display: inline-block;
+    background: var(--green-100);
+    color: var(--green-700);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 10px;
+    border-radius: var(--radius-xl);
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .tutorial-step h3 {
+    font-family: var(--font-title);
+    font-size: 1.15rem;
+    color: var(--green-800);
+    margin-bottom: 8px;
+  }
+
+  .tutorial-step p {
+    color: var(--gray-600);
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+
+  .tutorial-highlight {
+    background: var(--amber-100);
+    border-left: 3px solid var(--amber-500);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--amber-700);
+    margin: 12px 0;
+  }
+
+  .tutorial-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .tutorial-pill {
+    background: var(--green-50);
+    border: 1px solid var(--green-100);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--green-700);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tutorial-footer {
+    padding: 1rem 2rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--sand);
+  }
+
+  .step-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .step-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--sand);
+    transition: background var(--transition);
+  }
+
+  .step-dot.active {
+    background: var(--green-600);
+    width: 20px;
+    border-radius: 4px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px;
+    border-radius: var(--radius-md);
+    border: none;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .btn-primary {
+    background: var(--green-700);
+    color: var(--white);
+  }
+
+  .btn-primary:hover { background: var(--green-600); }
+
+  .btn-amber {
+    background: var(--amber-500);
+    color: var(--green-900);
+  }
+
+  .btn-amber:hover { background: var(--amber-700); color: var(--white); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--gray-400);
+    border: 1px solid var(--sand);
+  }
+
+  .btn-ghost:hover { background: var(--gray-100); color: var(--gray-600); }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ── Sources grid ────────────────────────────────────────────── */
+  .section-heading {
+    font-family: var(--font-title);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--green-800);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--sand);
+  }
+
+  .sources-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .source-card {
+    background: var(--white);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color var(--transition), transform var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .source-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--sand);
+    transition: background var(--transition);
+  }
+
+  .source-card.active::before { background: var(--green-600); }
+  .source-card.locked { opacity: 0.55; }
+
+  .source-card:not(.locked):hover {
+    border-color: var(--green-400);
+    transform: translateY(-1px);
+  }
+
+  .source-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .source-icon-wrap {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--green-50);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .source-card.active .source-icon-wrap {
+    background: var(--green-100);
+  }
+
+  .source-name {
+    font-weight: 500;
+    font-size: 13.5px;
+    color: var(--green-800);
+    line-height: 1.3;
+  }
+
+  .source-level-dots {
+    display: flex;
+    gap: 4px;
+    margin-top: 3px;
+  }
+
+  .level-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--sand);
+  }
+
+  .level-dot.filled { background: var(--green-600); }
+
+  .source-desc {
+    font-size: 12px;
+    color: var(--gray-400);
+    line-height: 1.55;
+  }
+
+  .source-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .tag {
+    font-size: 10.5px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: var(--radius-xl);
+    letter-spacing: 0.02em;
+  }
+
+  .tag-green  { background: var(--green-100);  color: var(--green-700); }
+  .tag-amber  { background: var(--amber-100);  color: var(--amber-700); }
+  .tag-blue   { background: #dbeafe; color: #1e40af; }
+  .tag-gray   { background: var(--gray-100);   color: var(--gray-600); }
+  .tag-red    { background: var(--red-100);    color: var(--red-600); }
+
+  .source-stats-row {
+    display: flex;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--gray-400);
+    border-top: 1px solid var(--gray-100);
+    padding-top: 8px;
+  }
+
+  .source-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .source-stat-label { font-size: 10px; color: var(--gray-400); }
+  .source-stat-val   { font-weight: 500; color: var(--green-700); font-size: 13px; }
+
+  .buy-btn {
+    width: 100%;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--sand);
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--green-700);
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-top: auto;
+  }
+
+  .buy-btn:hover:not(:disabled) {
+    background: var(--green-700);
+    color: var(--white);
+    border-color: var(--green-700);
+  }
+
+  .buy-btn:disabled {
+    color: var(--gray-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .buy-btn.maxed {
+    color: var(--green-600);
+    border-color: var(--green-100);
+    background: var(--green-50);
+    cursor: default;
+  }
+
+  /* ── Event card ──────────────────────────────────────────────── */
+  .event-area {
+    background: var(--amber-100);
+    border: 1px solid #f0c040;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    display: none;
+  }
+
+  .event-area.visible { display: block; }
+
+  .event-top {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .event-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .event-title {
+    font-family: var(--font-title);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--amber-700);
+    margin-bottom: 4px;
+  }
+
+  .event-desc {
+    font-size: 13px;
+    color: var(--gray-600);
+    line-height: 1.6;
+  }
+
+  .event-choices {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .choice-btn {
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--amber-700);
+    background: transparent;
+    color: var(--amber-700);
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .choice-btn:hover {
+    background: var(--amber-700);
+    color: var(--white);
+  }
+
+  /* ── Bottom bar ──────────────────────────────────────────────── */
+  .bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--white);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius-lg);
+  }
+
+  .balance-display {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .balance-label {
+    font-size: 11px;
+    color: var(--gray-400);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .balance-value {
+    font-family: var(--font-title);
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--green-700);
+  }
+
+  .balance-value.warn { color: var(--amber-700); }
+  .balance-value.bad  { color: var(--red-600); }
+
+  .bottom-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .op-costs-note {
+    font-size: 12px;
+    color: var(--gray-400);
+    text-align: right;
+  }
+
+  /* ── Win screen ──────────────────────────────────────────────── */
+  .win-screen {
+    display: none;
+    background: var(--green-50);
+    border: 2px solid var(--green-600);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .win-screen.visible { display: block; }
+
+  .win-trophy { font-size: 48px; margin-bottom: 1rem; }
+
+  .win-title {
+    font-family: var(--font-title);
+    font-size: 1.8rem;
+    color: var(--green-700);
+    margin-bottom: 8px;
+  }
+
+  .win-desc {
+    font-size: 14px;
+    color: var(--gray-600);
+    max-width: 400px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.7;
+  }
+
+  .win-stats {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .win-stat {
+    background: var(--white);
+    border: 1px solid var(--green-100);
+    border-radius: var(--radius-md);
+    padding: 10px 20px;
+    text-align: center;
+  }
+
+  .win-stat-label { font-size: 11px; color: var(--gray-400); margin-bottom: 2px; }
+  .win-stat-value { font-size: 20px; font-weight: 500; color: var(--green-700); }
+
+  /* ── Tutorial toggle button ──────────────────────────────────── */
+  .tutorial-toggle {
+    position: relative;
+  }
+
+  /* ── Progress bar ────────────────────────────────────────────── */
+  .progress-section {
+    background: var(--white);
+    border: 1px solid var(--sand);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.5rem;
+  }
+
+  .progress-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-400);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .objectives-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .objective-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .objective-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--gray-600);
+  }
+
+  .objective-value {
+    font-weight: 500;
+    font-size: 13px;
+  }
+
+  .obj-track {
+    height: 5px;
+    background: var(--sand);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .obj-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  .obj-fill.green  { background: var(--green-600); }
+  .obj-fill.amber  { background: var(--amber-500); }
+  .obj-fill.red    { background: #e07070; }
+</style>
+</head>
+
+<body>
+<!-- ============================================================
+     HTML — Estrutura da interface
+     ============================================================ -->
+
+<!-- Tutorial overlay -->
+<div class="tutorial-overlay" id="tutorialOverlay">
+  <div class="tutorial-box">
+    <div class="tutorial-header">
+      <div class="tutorial-header-icon">🌱</div>
+      <div>
+        <h2>Bem-vindo à FazendaVerde</h2>
+        <p>Simulador de Energias Renováveis no Campo</p>
+      </div>
+    </div>
+
+    <div class="tutorial-steps">
+
+      <div class="tutorial-step active" data-step="0">
+        <span class="step-num">Passo 1 de 5</span>
+        <h3>Sua missão</h3>
+        <p>Você herda uma fazenda que consome <strong>100% de óleo diesel</strong>. O diesel é caro, poluente e sujeito a altas de preço. Sua missão é modernizar a propriedade com energias renováveis.</p>
+        <div class="tutorial-highlight">
+          🎯 Objetivo: chegar ao Ano 3+ com 60 kW gerados, 80% de sustentabilidade e menos de 20% de dependência do diesel.
+        </div>
+      </div>
+
+      <div class="tutorial-step" data-step="1">
+        <span class="step-num">Passo 2 de 5</span>
+        <h3>As fontes de energia</h3>
+        <p>Você tem 6 tecnologias para instalar. Cada uma tem forças e limitações diferentes. Escolha com estratégia!</p>
+        <div class="tutorial-grid">
+          <div class="tutorial-pill">☀️ Solar — reduz conta de luz</div>
+          <div class="tutorial-pill">🐄 Biogás — substitui diesel</div>
+          <div class="tutorial-pill">🌾 Biomassa — estável, sem clima</div>
+          <div class="tutorial-pill">🌿 Agrovoltaico — duplo uso</div>
+          <div class="tutorial-pill">📜 Créditos de carbono — renda</div>
+          <div class="tutorial-pill">🚜 Frota híbrida — elimina diesel</div>
+        </div>
+      </div>
+
+      <div class="tutorial-step" data-step="2">
+        <span class="step-num">Passo 3 de 5</span>
+        <h3>Painel esquerdo — indicadores</h3>
+        <p>O painel lateral mostra seus 4 indicadores principais em tempo real:</p>
+        <div class="tutorial-highlight">
+          💰 Dinheiro &nbsp;·&nbsp; ⚡ Energia gerada &nbsp;·&nbsp; 🌿 Sustentabilidade &nbsp;·&nbsp; 🛢️ Dependência do diesel
+        </div>
+        <p>Abaixo dos indicadores você vê o <strong>registro da fazenda</strong> — um histórico de todas as suas decisões e eventos.</p>
+      </div>
+
+      <div class="tutorial-step" data-step="3">
+        <span class="step-num">Passo 4 de 5</span>
+        <h3>Eventos aleatórios</h3>
+        <p>A cada 2 anos, um evento acontece na fazenda: alta do diesel, tempestade, comprador internacional ou queda de energia. Suas escolhas têm consequências reais!</p>
+        <div class="tutorial-highlight">
+          ⚠️ Fazendas com mais fontes renováveis instaladas sempre têm mais opções vantajosas durante os eventos.
+        </div>
+      </div>
+
+      <div class="tutorial-step" data-step="4">
+        <span class="step-num">Passo 5 de 5</span>
+        <h3>Pronto para começar!</h3>
+        <p>Você começa com <strong>R$ 50.000</strong>. Instale fontes renováveis, avance os anos e responda aos eventos com inteligência.</p>
+        <div class="tutorial-highlight">
+          💡 Dica: comece com Biomassa (mais barata) ou Biogás (reduz mais o diesel). Depois expanda o solar!
+        </div>
+      </div>
+
+    </div>
+
+    <div class="tutorial-footer">
+      <div class="step-dots" id="stepDots">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" id="skipTutBtn">Pular tutorial</button>
+        <button class="btn btn-primary" id="nextStepBtn">Próximo →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App header -->
+<header class="app-header">
+  <div class="logo">
+    <div class="logo-icon">🌾</div>
+    FazendaVerde
+  </div>
+  <div class="header-meta">
+    <span id="yearBadge" class="year-badge">Ano 1</span>
+    <button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;color:var(--green-400);border-color:rgba(255,255,255,0.15);" onclick="showTutorial()">? Tutorial</button>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div>
+      <p class="sidebar-section-title">Indicadores</p>
+      <div class="stat-block">
+        <div class="stat-card">
+          <div class="stat-card-label">💰 Saldo</div>
+          <div class="stat-card-value" id="sideMoneyVal">R$ 50k</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">⚡ Energia</div>
+          <div class="stat-card-value" id="sideEnergyVal">0 kW</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">🌿 Sustentab.</div>
+          <div class="stat-card-value" id="sideSustainVal">0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">🛢️ Diesel</div>
+          <div class="stat-card-value" id="sideDieselVal">100%</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="sidebar-section-title">Progressão</p>
+      <div class="meter">
+        <div class="meter-header">
+          <span>Energia gerada</span>
+          <span id="mEnergy">0 / 60 kW</span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill" id="mEnergyFill" style="width:0%;background:#74c69d;"></div>
+        </div>
+      </div>
+      <div class="meter">
+        <div class="meter-header">
+          <span>Sustentabilidade</span>
+          <span id="mSustain">0 / 80%</span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill" id="mSustainFill" style="width:0%;background:#e9a329;"></div>
+        </div>
+      </div>
+      <div class="meter">
+        <div class="meter-header">
+          <span>Diesel (meta: &lt;20%)</span>
+          <span id="mDiesel">100%</span>
+        </div>
+        <div class="meter-track">
+          <div class="meter-fill" id="mDieselFill" style="width:100%;background:#e07070;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;min-height:0;">
+      <p class="sidebar-section-title">Registro da fazenda</p>
+      <div class="log-scroll" id="logScroll">
+        <div class="log-entry">Bem-vindo! Sua fazenda depende <strong>100% de diesel</strong>. Comece instalando fontes renováveis.</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- Win screen -->
+    <div class="win-screen" id="winScreen">
+      <div class="win-trophy">🏆</div>
+      <div class="win-title">Fazenda sustentável!</div>
+      <div class="win-desc">Você modernizou sua propriedade rural e se tornou um protagonista da transição energética do campo brasileiro.</div>
+      <div class="win-stats" id="winStats"></div>
+      <button class="btn btn-primary" onclick="resetGame()">Jogar novamente</button>
+    </div>
+
+    <!-- Event area -->
+    <div class="event-area" id="eventArea">
+      <div class="event-top">
+        <div class="event-icon" id="evIcon">⚡</div>
+        <div>
+          <div class="event-title" id="evTitle">Título</div>
+          <div class="event-desc" id="evDesc">Descrição do evento</div>
+        </div>
+      </div>
+      <div class="event-choices" id="evChoices"></div>
+    </div>
+
+    <!-- Sources -->
+    <div>
+      <p class="section-heading">Fontes de energia disponíveis</p>
+      <div class="sources-grid" id="sourcesGrid"></div>
+    </div>
+
+    <!-- Objectives -->
+    <div class="progress-section">
+      <p class="progress-title">Objetivos para vencer</p>
+      <div class="objectives-grid">
+        <div class="objective-item">
+          <div class="objective-header">
+            <span>⚡ Energia mínima</span>
+            <span class="objective-value" id="objEnergy">0 / 60 kW</span>
+          </div>
+          <div class="obj-track"><div class="obj-fill green" id="objEnergyFill" style="width:0%"></div></div>
+        </div>
+        <div class="objective-item">
+          <div class="objective-header">
+            <span>🌿 Sustentabilidade</span>
+            <span class="objective-value" id="objSustain">0 / 80%</span>
+          </div>
+          <div class="obj-track"><div class="obj-fill amber" id="objSustainFill" style="width:0%"></div></div>
+        </div>
+        <div class="objective-item">
+          <div class="objective-header">
+            <span>🛢️ Diesel máximo</span>
+            <span class="objective-value" id="objDiesel">100 / 20%</span>
+          </div>
+          <div class="obj-track"><div class="obj-fill red" id="objDieselFill" style="width:100%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+      <div class="balance-display">
+        <span class="balance-label">Saldo disponível</span>
+        <span class="balance-value" id="moneyDisplay">R$ 50.000</span>
+      </div>
+      <div class="op-costs-note" id="opCostsNote">Sem custos operacionais ainda</div>
+      <div class="bottom-actions">
+        <button class="btn btn-amber" id="nextTurnBtn" onclick="nextTurn()">Avançar ano →</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT — Lógica do jogo
+     ============================================================ -->
+<script>
+"use strict";
+
+/* ── Dados das fontes de energia ─────────────────────────────── */
+const SOURCES_DATA = [
+  {
+    id: 'solar', name: 'Energia solar fotovoltaica', icon: '☀️',
+    desc: 'Painéis fotovoltaicos para irrigação, ordenha e refrigeração. Não gera à noite.',
+    cost: 15000, energy: 20, sustain: 20, dieselReduction: 10, opCost: 500,
+    income: 0, tags: [['Reduz conta', 'green'], ['Intermitente', 'gray'], ['Alto custo', 'amber']],
+    maxLevel: 3, level: 0, unlockYear: 1
+  },
+  {
+    id: 'biogas', name: 'Biogás & biometano', icon: '🐄',
+    desc: 'Transforma dejetos animais em energia térmica e substitui diesel em tratores.',
+    cost: 22000, energy: 18, sustain: 25, dieselReduction: 25, opCost: 1200,
+    income: 0, tags: [['Substitui diesel', 'blue'], ['Resíduos úteis', 'green'], ['Investimento alto', 'amber']],
+    maxLevel: 2, level: 0, unlockYear: 1
+  },
+  {
+    id: 'biomassa', name: 'Biomassa agrícola', icon: '🌾',
+    desc: 'Queima de palha e bagaço para secar grãos. Fornecimento estável sem depender do clima.',
+    cost: 10000, energy: 12, sustain: 15, dieselReduction: 5, opCost: 800,
+    income: 0, tags: [['Estável', 'green'], ['Usa resíduos', 'blue'], ['Moderado', 'gray']],
+    maxLevel: 3, level: 0, unlockYear: 1
+  },
+  {
+    id: 'agrovolt', name: 'Sistema agrovoltaico', icon: '🌿',
+    desc: 'Combina painéis solares com cultivo agrícola no mesmo espaço. Exige solar instalada.',
+    cost: 18000, energy: 15, sustain: 30, dieselReduction: 8, opCost: 600,
+    income: 0, tags: [['Duplo uso', 'blue'], ['Alta sustentab.', 'green'], ['Requer solar', 'amber']],
+    maxLevel: 2, level: 0, unlockYear: 2
+  },
+  {
+    id: 'credito', name: 'Créditos de carbono', icon: '📜',
+    desc: 'Monetize a sustentabilidade vendendo créditos ao mercado verde internacional.',
+    cost: 5000, energy: 0, sustain: 10, dieselReduction: 0, opCost: 0,
+    income: 4000, tags: [['Renda extra', 'green'], ['Requer sustent.', 'amber']],
+    maxLevel: 1, level: 0, unlockYear: 3
+  },
+  {
+    id: 'hibrido', name: 'Frota híbrida / biometano', icon: '🚜',
+    desc: 'Converte tratores e colheitadeiras para biometano. Quebra a dependência do diesel.',
+    cost: 30000, energy: 5, sustain: 20, dieselReduction: 40, opCost: 2000,
+    income: 0, tags: [['Elimina diesel', 'blue'], ['Grande impacto', 'green'], ['Investimento alto', 'red']],
+    maxLevel: 1, level: 0, unlockYear: 3
+  }
+];
+
+/* ── Eventos aleatórios ──────────────────────────────────────── */
+const EVENTS = [
+  {
+    icon: '🌧️', title: 'Chuva excessiva!',
+    desc: 'A tempestade prejudicou a geração solar este mês. Você precisa de uma solução de backup.',
+    choices: [
+      { label: 'Usar backup de biomassa (−R$ 1.500)', cost: 1500, log: 'usou backup de biomassa' },
+      { label: 'Aceitar perda de produção (sem custo)', cost: 0, log: 'aceitou a perda de produção' }
+    ]
+  },
+  {
+    icon: '⛽', title: 'Alta do diesel!',
+    desc: 'O preço do diesel subiu 30%. Suas fontes limpas valem ainda mais agora.',
+    choices: [
+      { label: 'Ótimo! Minha fazenda está preparada (sem custo)', cost: 0, income: 2000, log: 'se beneficiou da alta do diesel com +R$ 2.000' },
+      { label: 'Precisamos urgente de mais biogás!', cost: 0, log: 'reconheceu a urgência de mais biogás' }
+    ]
+  },
+  {
+    icon: '🌍', title: 'Comprador internacional!',
+    desc: 'Um importador europeu quer comprar sua produção, mas exige certificação verde.',
+    needSustain: 40,
+    choices: [
+      { label: 'Fechar contrato (+R$ 8.000)', cost: 0, income: 8000, log: 'fechou contrato verde internacional (+R$ 8.000)' },
+      { label: 'Sem sustentabilidade suficiente — recusar', cost: 0, log: 'perdeu contrato por falta de sustentabilidade' }
+    ]
+  },
+  {
+    icon: '⚡', title: 'Queda de energia!',
+    desc: 'A rede elétrica caiu por 3 dias. Fazendas autossuficientes não sofreram prejuízo.',
+    choices: [
+      { label: 'Minha fazenda se manteve operando!', cost: 0, log: 'não sofreu com a queda de energia graças às fontes próprias' },
+      { label: 'Perdi produção — prejuízo de R$ 2.000', cost: 2000, log: 'perdeu R$ 2.000 com a queda de energia' }
+    ]
+  },
+  {
+    icon: '🏦', title: 'Linha de crédito verde!',
+    desc: 'Banco oferece financiamento com juros mínimos para propriedades sustentáveis.',
+    choices: [
+      { label: 'Solicitar R$ 15.000 a juros mínimos', cost: 0, income: 15000, log: 'obteve R$ 15.000 em crédito verde' },
+      { label: 'Não preciso no momento', cost: 0, log: 'declinou a linha de crédito verde' }
+    ]
+  }
+];
+
+/* ── Estado do jogo ──────────────────────────────────────────── */
+let state = {
+  money: 50000,
+  year: 1,
+  sources: JSON.parse(JSON.stringify(SOURCES_DATA)),
+  log: [],
+  eventPending: false
+};
+
+/* ── Cálculos derivados ──────────────────────────────────────── */
+const getEnergy    = () => state.sources.reduce((a, s) => a + s.energy * s.level, 0);
+const getSustain   = () => Math.min(100, state.sources.reduce((a, s) => a + s.sustain * s.level, 0));
+const getDiesel    = () => Math.max(0, 100 - state.sources.reduce((a, s) => a + s.dieselReduction * s.level, 0));
+const getOpCosts   = () => state.sources.reduce((a, s) => a + s.opCost * s.level, 0);
+const getPassiveIncome = () => state.sources.reduce((a, s) => a + (s.income || 0) * Math.min(s.level, 1), 0);
+
+function fmt(n) {
+  return 'R$ ' + Math.round(n).toLocaleString('pt-BR');
+}
+
+/* ── Renderização principal ──────────────────────────────────── */
+function render() {
+  const energy  = getEnergy();
+  const sustain = getSustain();
+  const diesel  = getDiesel();
+
+  document.getElementById('yearBadge').textContent = 'Ano ' + state.year;
+
+  const moneyClass = state.money < 8000 ? 'bad' : state.money < 20000 ? 'warn' : '';
+  document.getElementById('moneyDisplay').textContent = fmt(state.money);
+  document.getElementById('moneyDisplay').className = 'balance-value ' + moneyClass;
+
+  const shortMoney = state.money >= 1000 ? 'R$ ' + Math.round(state.money / 1000) + 'k' : fmt(state.money);
+  document.getElementById('sideMoneyVal').textContent = shortMoney;
+  document.getElementById('sideMoneyVal').className = 'stat-card-value ' + moneyClass;
+
+  document.getElementById('sideEnergyVal').textContent = energy + ' kW';
+  document.getElementById('sideEnergyVal').className = 'stat-card-value ' + (energy >= 60 ? 'good' : energy >= 30 ? 'warn' : 'bad');
+
+  document.getElementById('sideSustainVal').textContent = sustain + '%';
+  document.getElementById('sideSustainVal').className = 'stat-card-value ' + (sustain >= 80 ? 'good' : sustain >= 40 ? 'warn' : 'bad');
+
+  document.getElementById('sideDieselVal').textContent = diesel + '%';
+  document.getElementById('sideDieselVal').className = 'stat-card-value ' + (diesel <= 20 ? 'good' : diesel <= 50 ? 'warn' : 'bad');
+
+  document.getElementById('mEnergy').textContent = energy + ' / 60 kW';
+  document.getElementById('mEnergyFill').style.width = Math.min(100, Math.round(energy / 60 * 100)) + '%';
+
+  document.getElementById('mSustain').textContent = sustain + ' / 80%';
+  document.getElementById('mSustainFill').style.width = Math.min(100, Math.round(sustain / 80 * 100)) + '%';
+
+  document.getElementById('mDiesel').textContent = diesel + '%';
+  document.getElementById('mDieselFill').style.width = diesel + '%';
+  document.getElementById('mDieselFill').style.background = diesel <= 20 ? '#74c69d' : diesel <= 50 ? '#e9a329' : '#e07070';
+
+  document.getElementById('objEnergy').textContent = energy + ' / 60 kW';
+  document.getElementById('objEnergyFill').style.width = Math.min(100, Math.round(energy / 60 * 100)) + '%';
+  document.getElementById('objEnergyFill').className = 'obj-fill ' + (energy >= 60 ? 'green' : 'amber');
+
+  document.getElementById('objSustain').textContent = sustain + ' / 80%';
+  document.getElementById('objSustainFill').style.width = Math.min(100, Math.round(sustain / 80 * 100)) + '%';
+
+  document.getElementById('objDiesel').textContent = diesel + ' / 20%';
+  const dieselProgress = Math.round((100 - diesel) / 80 * 100);
+  document.getElementById('objDieselFill').style.width = Math.min(100, dieselProgress) + '%';
+  document.getElementById('objDieselFill').className = 'obj-fill ' + (diesel <= 20 ? 'green' : 'amber');
+
+  const opCosts = getOpCosts();
+  const passiveIncome = getPassiveIncome();
+  const greenBonus = sustain >= 50 ? 3000 : sustain >= 30 ? 1000 : 0;
+  if (opCosts > 0 || passiveIncome > 0) {
+    document.getElementById('opCostsNote').textContent =
+      'Por ano: ' +
+      (passiveIncome + greenBonus > 0 ? '+' + Math.round(passiveIncome + greenBonus).toLocaleString('pt-BR') + ' receita · ' : '') +
+      '−' + Math.round(opCosts).toLocaleString('pt-BR') + ' custos';
+  } else {
+    document.getElementById('opCostsNote').textContent = 'Sem custos operacionais ainda';
+  }
+
+  renderSources();
+
+  if (sustain >= 80 && energy >= 60 && diesel <= 20 && state.year >= 3) {
+    showWin(energy, sustain, diesel);
+  }
+}
+
+/* ── Renderiza cards das fontes ──────────────────────────────── */
+function renderSources() {
+  const grid = document.getElementById('sourcesGrid');
+  grid.innerHTML = '';
+  const solarInstalled = state.sources.find(s => s.id === 'solar').level > 0;
+  const sustain = getSustain();
+
+  state.sources.forEach(src => {
+    const locked = src.unlockYear > state.year;
+    const needSolar  = src.id === 'agrovolt' && !solarInstalled;
+    const needSustain = src.id === 'credito' && sustain < 30;
+    const isMaxed = src.level >= src.maxLevel;
+    const cantAfford = state.money < src.cost;
+    const cantBuy = locked || needSolar || needSustain || isMaxed || cantAfford || state.eventPending;
+
+    const dots = Array.from({length: src.maxLevel}, (_, i) =>
+      `<div class="level-dot${i < src.level ? ' filled' : ''}"></div>`
+    ).join('');
+
+    let btnLabel = '';
+    if (locked)       btnLabel = `Disponível no Ano ${src.unlockYear}`;
+    else if (needSolar)   btnLabel = 'Requer solar instalada';
+    else if (needSustain) btnLabel = 'Requer sustentabilidade 30%+';
+    else if (isMaxed)     btnLabel = '✓ Nível máximo instalado';
+    else if (cantAfford)  btnLabel = 'Saldo insuficiente';
+    else btnLabel = `Instalar — ${fmt(src.cost)}`;
+
+    const statsHtml = `
+      <div class="source-stats-row">
+        ${src.energy > 0 ? `<div class="source-stat-item"><div class="source-stat-label">Energia</div><div class="source-stat-val">+${src.energy} kW</div></div>` : ''}
+        ${src.sustain > 0 ? `<div class="source-stat-item"><div class="source-stat-label">Sustentab.</div><div class="source-stat-val">+${src.sustain}%</div></div>` : ''}
+        ${src.dieselReduction > 0 ? `<div class="source-stat-item"><div class="source-stat-label">Diesel</div><div class="source-stat-val">−${src.dieselReduction}%</div></div>` : ''}
+        ${src.income > 0 ? `<div class="source-stat-item"><div class="source-stat-label">Renda/ano</div><div class="source-stat-val">+${Math.round(src.income/1000)}k</div></div>` : ''}
+      </div>
+    `;
+
+    const tagsHtml = src.tags.map(([t, c]) => `<span class="tag tag-${c}">${t}</span>`).join('');
+
+    grid.innerHTML += `
+      <div class="source-card${src.level > 0 ? ' active' : ''}${locked || needSolar ? ' locked' : ''}">
+        <div class="source-card-header">
+          <div class="source-icon-wrap">${src.icon}</div>
+          <div>
+            <div class="source-name">${src.name}</div>
+            <div class="source-level-dots">${dots}</div>
+          </div>
+        </div>
+        <div class="source-desc">${src.desc}</div>
+        <div class="source-tags">${tagsHtml}</div>
+        ${src.energy > 0 || src.sustain > 0 || src.dieselReduction > 0 || src.income > 0 ? statsHtml : ''}
+        <button
+          class="buy-btn${isMaxed ? ' maxed' : ''}"
+          onclick="buySrc('${src.id}')"
+          ${cantBuy ? 'disabled' : ''}
+        >${btnLabel}</button>
+      </div>
+    `;
+  });
+}
+
+/* ── Comprar / instalar fonte ────────────────────────────────── */
+function buySrc(id) {
+  const src = state.sources.find(s => s.id === id);
+  if (!src || state.money < src.cost || src.level >= src.maxLevel || state.eventPending) return;
+
+  state.money -= src.cost;
+  src.level++;
+
+  const lvl = src.maxLevel > 1 ? ` (nível ${src.level})` : '';
+  addLog(`✅ ${src.name}${lvl} instalada. Gasto: ${fmt(src.cost)}.`);
+  if (src.energy > 0)          addLog(`⚡ Capacidade: +${src.energy} kW`);
+  if (src.dieselReduction > 0) addLog(`🛢️ Diesel reduzido em ${src.dieselReduction}%`);
+  if (src.sustain > 0)         addLog(`🌿 Sustentabilidade: +${src.sustain}%`);
+
+  render();
+}
+
+/* ── Avançar ano ─────────────────────────────────────────────── */
+function nextTurn() {
+  if (state.eventPending) return;
+
+  state.year++;
+  const income    = getPassiveIncome();
+  const opCosts   = getOpCosts();
+  const sustain   = getSustain();
+  const greenBonus = sustain >= 50 ? 3000 : sustain >= 30 ? 1000 : 0;
+  const net       = income + greenBonus - opCosts;
+
+  state.money = Math.max(0, state.money + net);
+
+  addLog(`📅 Ano ${state.year} — balanço: ${net >= 0 ? '+' : ''}${Math.round(net).toLocaleString('pt-BR')}${greenBonus > 0 ? ` (incl. bônus verde de R$ ${greenBonus.toLocaleString('pt-BR')})` : ''}`);
+
+  if (state.year % 2 === 0) {
+    triggerEvent();
+  }
+
+  render();
+}
+
+/* ── Eventos ─────────────────────────────────────────────────── */
+function triggerEvent() {
+  const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+  state.eventPending = true;
+
+  document.getElementById('evIcon').textContent  = ev.icon;
+  document.getElementById('evTitle').textContent = ev.title;
+  document.getElementById('evDesc').textContent  = ev.desc;
+
+  const sustain = getSustain();
+  const energy  = getEnergy();
+
+  let filteredChoices = ev.choices.slice();
+
+  if (ev.title === 'Comprador internacional!' && sustain < 40) {
+    filteredChoices = [ev.choices[1]];
+  }
+  if (ev.title === 'Queda de energia!') {
+    filteredChoices = energy >= 40 ? [ev.choices[0]] : [ev.choices[1]];
+  }
+
+  const choicesEl = document.getElementById('evChoices');
+  choicesEl.innerHTML = '';
+  filteredChoices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c.label;
+    btn.onclick = () => resolveEvent(c);
+    choicesEl.appendChild(btn);
+  });
+
+  document.getElementById('eventArea').classList.add('visible');
+  document.getElementById('nextTurnBtn').disabled = true;
+}
+
+function resolveEvent(choice) {
+  if (choice.cost > 0)   { state.money = Math.max(0, state.money - choice.cost); }
+  if (choice.income > 0) { state.money += choice.income; }
+
+  addLog(`🎲 Evento resolvido: você ${choice.log}.`);
+
+  state.eventPending = false;
+  document.getElementById('eventArea').classList.remove('visible');
+  document.getElementById('nextTurnBtn').disabled = false;
+  render();
+}
+
+/* ── Log ─────────────────────────────────────────────────────── */
+function addLog(msg) {
+  state.log.push(msg);
+  const scroll = document.getElementById('logScroll');
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = msg;
+  scroll.insertBefore(div, scroll.firstChild);
+}
+
+/* ── Vitória ─────────────────────────────────────────────────── */
+function showWin(energy, sustain, diesel) {
+  const ws = document.getElementById('winScreen');
+  ws.classList.add('visible');
+  document.getElementById('winStats').innerHTML = `
+    <div class="win-stat"><div class="win-stat-label">Energia gerada</div><div class="win-stat-value">${energy} kW</div></div>
+    <div class="win-stat"><div class="win-stat-label">Sustentabilidade</div><div class="win-stat-value">${sustain}%</div></div>
+    <div class="win-stat"><div class="win-stat-label">Diesel restante</div><div class="win-stat-value">${diesel}%</div></div>
+    <div class="win-stat"><div class="win-stat-label">Anos jogados</div><div class="win-stat-value">${state.year}</div></div>
+  `;
+  document.getElementById('nextTurnBtn').disabled = true;
+}
+
+function resetGame() {
+  state = { money: 50000, year: 1, sources: JSON.parse(JSON.stringify(SOURCES_DATA)), log: [], eventPending: false };
+  document.getElementById('winScreen').classList.remove('visible');
+  document.getElementById('eventArea').classList.remove('visible');
+  document.getElementById('nextTurnBtn').disabled = false;
+  document.getElementById('logScroll').innerHTML = '<div class="log-entry">Bem-vindo! Sua fazenda depende <strong>100% de diesel</strong>. Comece instalando fontes renováveis.</div>';
+  render();
+}
+
+/* ── Tutorial ────────────────────────────────────────────────── */
+let tutorialStep = 0;
+const TOTAL_STEPS = 5;
+
+function updateTutorialUI() {
+  document.querySelectorAll('.tutorial-step').forEach((el, i) => {
+    el.classList.toggle('active', i === tutorialStep);
+  });
+  document.querySelectorAll('.step-dot').forEach((el, i) => {
+    el.classList.toggle('active', i === tutorialStep);
+  });
+  const nextBtn = document.getElementById('nextStepBtn');
+  nextBtn.textContent = tutorialStep === TOTAL_STEPS - 1 ? 'Começar a jogar!' : 'Próximo →';
+}
+
+document.getElementById('nextStepBtn').onclick = () => {
+  if (tutorialStep < TOTAL_STEPS - 1) {
+    tutorialStep++;
+    updateTutorialUI();
+  } else {
+    document.getElementById('tutorialOverlay').style.display = 'none';
+  }
+};
+
+document.getElementById('skipTutBtn').onclick = () => {
+  document.getElementById('tutorialOverlay').style.display = 'none';
+};
+
+function showTutorial() {
+  tutorialStep = 0;
+  updateTutorialUI();
+  document.getElementById('tutorialOverlay').style.display = 'flex';
+}
+
+/* ── Init ────────────────────────────────────────────────────── */
+render();
+</script>
+</body>
+</html>
